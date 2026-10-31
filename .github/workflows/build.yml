@@ -21,6 +21,10 @@ jobs:
           echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
           echo "$HOME/theos/bin" >> "$GITHUB_PATH"
 
+      - name: Install ldid
+        run: |
+          brew install ldid
+
       - name: Build Package
         run: |
           make package FINALPACKAGE=1
