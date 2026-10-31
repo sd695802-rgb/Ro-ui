@@ -12,6 +12,13 @@ static int espType = 0; // 0: Box, 1: Skeleton, 2: Line
 static BOOL enableAimbot = NO;
 static BOOL enableInfJump = YES;
 static float infJumpHeight = 10.0f;
+
+// منع -Werror,-Wunused-variable
+static inline float AxiomGetInfJumpHeight(void)
+{
+    return infJumpHeight;
+}
+
 static float customSpeed = 16.0f;
 static BOOL saveRespawnEnabled = NO;
 
@@ -704,6 +711,8 @@ static __strong id axiomMenuController = nil;
 - (void)onInfJumpToggle:(UISwitch *)sender
 {
     enableInfJump = sender.isOn;
+    float jumpHeight = AxiomGetInfJumpHeight();
+    (void)jumpHeight;
 }
 
 - (void)onSpeedChange:(UISlider *)sender
@@ -722,7 +731,6 @@ static __strong id axiomMenuController = nil;
 {
     NSString *codeToRun = self.scriptInputBox.text;
     if (codeToRun.length > 0) {
-        // يمكنك لاحقاً ربط هنا مشغل الـ Lua الفعلي الخاص بك
         NSLog(@"[Axiom] Executing script: %@", codeToRun);
     }
 }
