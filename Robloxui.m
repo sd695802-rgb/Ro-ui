@@ -54,8 +54,7 @@ static __strong id axiomMenuController = nil;
         self.savedScriptsArray = [NSMutableArray arrayWithArray:storedScripts];
     } else {
         self.savedScriptsArray = [NSMutableArray arrayWithArray:@[
-            @{@"name": @"Script 1", @"code": @"print('Axiom Script 1');"},
-            @{@"name": @"Script 2", @"code": @"print('Axiom Script 2');"}
+            @{@"name": @"Default Script", @"code": @"print('Axiom Loaded successfully!');"}
         ]];
     }
 
@@ -120,6 +119,16 @@ static __strong id axiomMenuController = nil;
     [gesture setTranslation:CGPointZero inView:window];
 }
 
+// جعل اللوحة الرئيسية قابلة للسحب أيضاً مثل الزر العائم
+- (void)handlePanelPan:(UIPanGestureRecognizer *)gesture {
+    UIWindow *window = [self activeWindow];
+    CGPoint translation = [gesture translationInView:window];
+    CGPoint recognizerCenter = gesture.view.center;
+    
+    gesture.view.center = CGPointMake(recognizerCenter.x + translation.x, recognizerCenter.y + translation.y);
+    [gesture setTranslation:CGPointZero inView:window];
+}
+
 - (void)setupMainPanel {
     if (self.mainPanel) return;
 
@@ -129,6 +138,9 @@ static __strong id axiomMenuController = nil;
     self.mainPanel.layer.borderWidth = 1.5f;
     self.mainPanel.layer.borderColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0].CGColor;
     self.mainPanel.hidden = YES;
+
+    UIPanGestureRecognizer *panelPan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePanelPan:)];
+    [self.mainPanel addGestureRecognizer:panelPan];
 
     UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(10, 8, 300, 25)];
     title.text = @"AXIOM'S ROBLOX CORE V1.0";
@@ -255,14 +267,14 @@ static __strong id axiomMenuController = nil;
     self.scriptNameField = [[UITextField alloc] initWithFrame:CGRectMake(10, 10, 180, 30)];
     self.scriptNameField.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
     self.scriptNameField.textColor = [UIColor whiteColor];
-    self.scriptNameField.placeholder = @" Script Name";
+    self.scriptNameField.placeholder = @" Enter Script Name";
     self.scriptNameField.font = [UIFont systemFontOfSize:12];
     self.scriptNameField.layer.cornerRadius = 4.0f;
     [self.viewSaver addSubview:self.scriptNameField];
 
     UIButton *saveBtn = [UIButton buttonWithType:UIButtonTypeSystem];
     saveBtn.frame = CGRectMake(200, 10, 90, 30);
-    [saveBtn setTitle:@"Save Current" forState:UIControlStateNormal];
+    [saveBtn setTitle:@"Save" forState:UIControlStateNormal];
     [saveBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     saveBtn.backgroundColor = [UIColor colorWithRed:0.0 green:0.4 blue:0.8 alpha:1.0];
     saveBtn.layer.cornerRadius = 4.0f;
