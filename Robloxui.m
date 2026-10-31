@@ -4,27 +4,47 @@
 #import <substrate.h>
 #import <QuartzCore/QuartzCore.h>
 #import <objc/runtime.h>
+#import <pthread.h>
 
 static __strong id mxMenuController = nil;
 
-// --- تعريف دوال تخطي الحماية (Bypass) ---
-void (*orig_kickUser)(void *self, SEL sel, id reason);
+// --- نظام تخطي الحماية ومنع الكراش المتقدم (Advanced Bypass & Crash Prevention) ---
 
-void replacement_kickUser(void *self, SEL sel, id reason) {
-    NSLog(@"[Melux MX Bypass] Anti-cheat kick attempt intercepted and blocked: %@", reason);
+// 1. مؤشر واعتراض دوال فحص الذاكرة والتكامل لتجنب الكراش الفوري
+bool (*orig_ptr_checkSecurity)(void *self, SEL sel);
+bool replacement_ptr_checkSecurity(void *self, SEL sel) {
+    // خداع الحماية وإرجاع قيمة أن كل شيء سليم تماماً
+    NSLog(@"[Melux MX Security] Security integrity check intercepted and bypassed.");
+    return true; 
 }
 
-void setupAntiCheatBypass() {
-    Class targetClass = objc_getClass("RelaunchManager");
-    if (targetClass) {
-        Method targetMethod = class_getInstanceMethod(targetClass, @selector(kickPlayer:));
-        if (targetMethod) {
-            MSHookMessageEx(targetClass, @selector(kickPlayer:), (IMP)&replacement_kickUser, (IMP *)&orig_kickUser);
-            NSLog(@"[Melux MX Bypass] Bypass hooked successfully!");
+// 2. تخطي دوال الطرد والإغلاق
+void (*orig_kickUser)(void *self, SEL sel, id reason);
+void replacement_kickUser(void *self, SEL sel, id reason) {
+    NSLog(@"[Melux MX Bypass] Kick attempt blocked successfully: %@", reason);
+}
+
+void setupAdvancedBypass() {
+    // استهداف كلاسات الحماية الشائعة في روبلوكس وتطبيق الـ Hooks
+    Class securityClass = objc_getClass("ClientSecurityContext");
+    if (securityClass) {
+        Method m1 = class_getInstanceMethod(securityClass, @selector(isDeviceSecure));
+        if (m1) {
+            MSHookMessageEx(securityClass, @selector(isDeviceSecure), (IMP)&replacement_ptr_checkSecurity, (IMP *)&orig_ptr_checkSecurity);
         }
     }
+    
+    Class relaunchClass = objc_getClass("RelaunchManager");
+    if (relaunchClass) {
+        Method m2 = class_getInstanceMethod(relaunchClass, @selector(kickPlayer:));
+        if (m2) {
+            MSHookMessageEx(relaunchClass, @selector(kickPlayer:), (IMP)&replacement_kickUser, (IMP *)&orig_kickUser);
+        }
+    }
+    
+    NSLog(@"[Melux MX] Advanced Anti-Cheat Bypass and Crash Protections Activated!");
 }
-// ----------------------------------------
+// ------------------------------------------------------------------------------
 
 @interface MXMenuController : UIViewController <UITableViewDelegate, UITableViewDataSource, UITextViewDelegate, UITextFieldDelegate>
 
@@ -51,10 +71,6 @@ void setupAntiCheatBypass() {
 - (void)setupSavedView;
 - (void)setupAboutView;
 
-- (void)switchTabToUseScript:(id)sender;
-- (void)switchTabToSaved:(id)sender;
-- (void)switchTabToAbout:(id)sender;
-
 @end
 
 @implementation MXMenuController
@@ -68,7 +84,7 @@ void setupAntiCheatBypass() {
         self.savedScriptsArray = [NSMutableArray arrayWithArray:storedScripts];
     } else {
         self.savedScriptsArray = [NSMutableArray arrayWithArray:@[
-            @{@"name": @"Welcome Script", @"code": @"print('Melux MX Loaded Successfully!');"}
+            @{@"name": @"Welcome Script", @"code": @"print('Melux MX Protected & Loaded Successfully!');"}
         ]];
     }
 
@@ -156,9 +172,9 @@ void setupAntiCheatBypass() {
     [self.mainPanel addGestureRecognizer:panelPan];
 
     UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(10, 8, 310, 25)];
-    title.text = @"MELUX - MX EXECUTOR";
+    title.text = @"MELUX - MX PROTECTED EXECUTOR";
     title.textColor = [UIColor whiteColor];
-    title.font = [UIFont boldSystemFontOfSize:14.0];
+    title.font = [UIFont boldSystemFontOfSize:13.0];
     title.textAlignment = NSTextAlignmentCenter;
     [self.mainPanel addSubview:title];
 
@@ -206,7 +222,7 @@ void setupAntiCheatBypass() {
     self.scriptInputBox.backgroundColor = [UIColor colorWithRed:0.03 green:0.03 blue:0.04 alpha:1.0];
     self.scriptInputBox.textColor = [UIColor colorWithRed:0.2 green:1.0 blue:0.4 alpha:1.0];
     self.scriptInputBox.font = [UIFont fontWithName:@"Courier" size:12];
-    self.scriptInputBox.text = @"-- Paste your Lua script here\nprint('Melux MX Running...');";
+    self.scriptInputBox.text = @"-- Paste your Lua script here\nprint('Melux MX Active...');";
     self.scriptInputBox.layer.cornerRadius = 6.0f;
     self.scriptInputBox.layer.borderWidth = 1.0f;
     self.scriptInputBox.layer.borderColor = [UIColor colorWithWhite:0.2 alpha:1.0].CGColor;
@@ -276,7 +292,7 @@ void setupAntiCheatBypass() {
     self.viewSaved = [[UIView alloc] initWithFrame:self.contentContainer.bounds];
 
     UILabel *savedHeader = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 310, 25)];
-    savedHeader.text = @"السكربتات المحفوظة (اضغط Run لتشغيلها):";
+    savedHeader.text = @"السكربتات المحفوظة:";
     savedHeader.textColor = [UIColor lightGrayColor];
     savedHeader.font = [UIFont systemFontOfSize:11.0];
     [self.viewSaved addSubview:savedHeader];
@@ -292,7 +308,6 @@ void setupAntiCheatBypass() {
 
 - (void)setupAboutView {
     self.viewAbout = [[UIView alloc] initWithFrame:self.contentContainer.bounds];
-
     CGFloat btnY = 20;
     
     UIButton *tgChannelBtn = [self createLinkButton:@"1- قناتي تيلجرام" frame:CGRectMake(10, btnY, 290, 45)];
@@ -386,7 +401,7 @@ void setupAntiCheatBypass() {
 - (void)executeScriptAction:(id)sender {
     NSString *codeToRun = self.scriptInputBox.text;
     if (codeToRun.length > 0) {
-        NSLog(@"[Melux MX] Executing script:\n%@", codeToRun);
+        NSLog(@"[Melux MX] Executing script safely...");
         
         uint64_t luauExecOffset = 0x10085ae58;
         uint64_t slide = _dyld_get_image_vmaddr_slide(0);
@@ -395,13 +410,7 @@ void setupAntiCheatBypass() {
         if (targetFunctionAddress != 0) {
             typedef void (*LuauExecuteFunction)(const char *script);
             LuauExecuteFunction executeLua = (LuauExecuteFunction)targetFunctionAddress;
-            
-            const char *utf8Script = [codeToRun UTF8String];
-            executeLua(utf8Script);
-            
-            NSLog(@"[Melux MX] Script executed at address: 0x%llx", targetFunctionAddress);
-        } else {
-            NSLog(@"[Melux MX] Error: Failed to resolve target memory address.");
+            executeLua([codeToRun UTF8String]);
         }
     }
 }
@@ -483,13 +492,11 @@ void setupAntiCheatBypass() {
 
 __attribute__((constructor))
 static void mx_entry(void) {
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        // تفعيل تخطي الحماية أولاً عند الإقلاع
-        setupAntiCheatBypass();
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        // تفعيل نظام الحماية المتقدم أولاً قبل تحميل الواجهة لمنع الكراش
+        setupAdvancedBypass();
 
-        if (mxMenuController != nil) {
-            return;
-        }
+        if (mxMenuController != nil) return;
 
         MXMenuController *controller = [[MXMenuController alloc] init];
         mxMenuController = controller;
