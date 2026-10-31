@@ -57,14 +57,12 @@ self.mainPanel.layer.cornerRadius = 14;
 self.mainPanel.layer.borderWidth = 1.5f;
 self.mainPanel.layer.borderColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0].CGColor;
 self.mainPanel.hidden = YES;
-// Title bar
 UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(10, 8, 300, 25)];
 title.text = @"AXIOM'S ROBLOX CORE V1.0";
 title.textColor = [UIColor whiteColor];
 title.font = [UIFont boldSystemFontOfSize:13];
 title.textAlignment = NSTextAlignmentCenter;
 [self.mainPanel addSubview:title];
-// Navigation Tabs
 CGFloat tabW = 96;
 self.tabTogglesBtn = [self createTabButton:@"Toggles" frame:CGRectMake(10, 38, tabW, 30) action:@selector(switchTabToToggles:)];
 self.tabExecutorBtn = [self createTabButton:@"Executor" frame:CGRectMake(112, 38, tabW, 30) action:@selector(switchTabToExecutor:)];
@@ -72,13 +70,11 @@ self.tabSaverBtn = [self createTabButton:@"Saved" frame:CGRectMake(214, 38, tabW
 [self.mainPanel addSubview:self.tabTogglesBtn];
 [self.mainPanel addSubview:self.tabExecutorBtn];
 [self.mainPanel addSubview:self.tabSaverBtn];
-// Content Container
 self.contentContainer = [[UIView alloc] initWithFrame:CGRectMake(10, 75, 300, 305)];
 [self.mainPanel addSubview:self.contentContainer];
 [self setupTogglesView];
 [self setupExecutorView];
 [self setupSaverView];
-// Show default tab
 [self switchTabToToggles:nil];
 UIWindow *window = [UIApplication sharedApplication].keyWindow;
 [window addSubview:self.mainPanel];
@@ -99,7 +95,6 @@ self.viewToggles = [[UIView alloc] initWithFrame:self.contentContainer.bounds];
 UIScrollView *scroll = [[UIScrollView alloc] initWithFrame:self.viewToggles.bounds];
 scroll.contentSize = CGSizeMake(300, 420);
 CGFloat yPos = 10;
-// ESP Master Switch
 UISwitch *espSw = [[UISwitch alloc] initWithFrame:CGRectMake(10, yPos, 0, 0)];
 [espSw addTarget:self action:@selector(onEspToggle:) forControlEvents:UIControlEventValueChanged];
 [scroll addSubview:espSw];
@@ -109,14 +104,12 @@ espLbl.textColor = [UIColor whiteColor];
 espLbl.font = [UIFont systemFontOfSize:13];
 [scroll addSubview:espLbl];
 yPos += 45;
-// ESP Segmented Control (Box / Skeleton / Line)
 UISegmentedControl *espSeg = [[UISegmentedControl alloc] initWithItems:@[@"Box", @"Skeleton", @"Line"]];
-espSeg.frame = CGRectMake(10, yPos, 280, 30];
+espSeg.frame = CGRectMake(10, yPos, 280, 30);
 espSeg.selectedSegmentIndex = 0;
 [espSeg addTarget:self action:@selector(onEspTypeChange:) forControlEvents:UIControlEventValueChanged];
 [scroll addSubview:espSeg];
 yPos += 45;
-// Aimbot Switch
 UISwitch *aimSw = [[UISwitch alloc] initWithFrame:CGRectMake(10, yPos, 0, 0)];
 [aimSw addTarget:self action:@selector(onAimbotToggle:) forControlEvents:UIControlEventValueChanged];
 [scroll addSubview:aimSw];
@@ -126,7 +119,6 @@ aimLbl.textColor = [UIColor whiteColor];
 aimLbl.font = [UIFont systemFontOfSize:13];
 [scroll addSubview:aimLbl];
 yPos += 45;
-// Infinite Jump Switch
 UISwitch *jumpSw = [[UISwitch alloc] initWithFrame:CGRectMake(10, yPos, 0, 0)];
 [jumpSw setOn:YES];
 [jumpSw addTarget:self action:@selector(onInfJumpToggle:) forControlEvents:UIControlEventValueChanged];
@@ -137,7 +129,6 @@ jumpLbl.textColor = [UIColor whiteColor];
 jumpLbl.font = [UIFont systemFontOfSize:13];
 [scroll addSubview:jumpLbl];
 yPos += 40;
-// Speed Slider
 UILabel *spdLbl = [[UILabel alloc] initWithFrame:CGRectMake(10, yPos, 280, 20)];
 spdLbl.text = @"Speed Multiplier";
 spdLbl.textColor = [UIColor lightGrayColor];
@@ -152,7 +143,6 @@ spdSlider.value = 16.0f;
 [spdSlider addTarget:self action:@selector(onSpeedChange:) forControlEvents:UIControlEventValueChanged];
 [scroll addSubview:spdSlider];
 yPos += 45;
-// Save Respawn Switch
 UISwitch *respawnSw = [[UISwitch alloc] initWithFrame:CGRectMake(10, yPos, 0, 0)];
 [respawnSw addTarget:self action:@selector(onRespawnToggle:) forControlEvents:UIControlEventValueChanged];
 [scroll addSubview:respawnSw];
@@ -216,7 +206,6 @@ self.savedScriptsTable.dataSource = self;
 [self.viewSaver addSubview:self.savedScriptsTable];
 [self.contentContainer addSubview:self.viewSaver];
 }
-// Tab Switching Actions
  (void)switchTabToToggles:(id)sender {
 self.viewToggles.hidden = NO;
 self.viewExecutor.hidden = YES;
@@ -250,17 +239,14 @@ b.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
  (void)toggleMenuVisibility {
 self.mainPanel.hidden = !self.mainPanel.hidden;
 }
-// Feature Toggles Actions
  (void)onEspToggle:(UISwitch *)sender { enableESP = sender.isOn; }
  (void)onEspTypeChange:(UISegmentedControl *)sender { espType = (int)sender.selectedSegmentIndex; }
  (void)onAimbotToggle:(UISwitch *)sender { enableAimbot = sender.isOn; }
  (void)onInfJumpToggle:(UISwitch *)sender { enableInfJump = sender.isOn; }
  (void)onSpeedChange:(UISlider *)sender { customSpeed = sender.value; }
  (void)onRespawnToggle:(UISwitch *)sender { saveRespawnEnabled = sender.isOn; }
-// Executor Actions
  (void)executeScriptAction:(id)sender {
 NSString *codeToRun = self.scriptInputBox.text;
-// Interface logic handler for Lua execution bridge in Roblox environment
 }
  (void)clearScriptAction:(id)sender {
 self.scriptInputBox.text = @"";
@@ -273,7 +259,6 @@ if (self.scriptNameField.text.length > 0) {
 self.scriptNameField.text = @"";
 }
 }
-// UITableView DataSource & Delegate for Saved Scripts
  (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
 return self.savedScriptsArray.count;
 }
@@ -291,14 +276,15 @@ return cell;
 }
  (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
 [tableView deselectRowAtIndexPath:indexPath animated:YES];
-// Load script into execution panel when tapped
 self.scriptInputBox.text = [NSString stringWithFormat:@"-- Loaded: %@\nprint('Executing saved script...');", self.savedScriptsArray[indexPath.row]];
 [self switchTabToExecutor:nil];
 }
 @end
-// Constructor injection startup
 attribute((constructor)) static void axiom_entry() {
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+UIWindow *window = [UIApplication sharedApplication].keyWindow;
+if (window) {
 AxiomMenuController *controller = [[AxiomMenuController alloc] init];
+}
 });
 }
