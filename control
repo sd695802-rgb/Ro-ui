@@ -1,0 +1,9 @@
+package: com.axiom.robloxmodmenu
+name: Axiom Roblox Mod Menu
+depends: mobilesubstrate
+version: 1.0.0
+architecture: arm64
+maintainer: Axiom
+author: Axiom
+section: Tweaks
+description: Advanced Roblox iOS Dylib with ESP, Aimbot, InfJump, and Lua Script Executor.
