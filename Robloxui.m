@@ -1,5 +1,6 @@
 #import <UIKit/UIKit.h>
 #import <mach/mach.h>
+#import <mach-o/dyld.h>
 #import <substrate.h>
 #import <QuartzCore/QuartzCore.h>
 
@@ -372,7 +373,27 @@ static __strong id mxMenuController = nil;
     NSString *codeToRun = self.scriptInputBox.text;
     if (codeToRun.length > 0) {
         NSLog(@"[Melux MX] Executing script:\n%@", codeToRun);
-        // هنا يتم تشغيل السكربت عند دخول الماب الفعلي
+        
+        // الأوفست الفعلي الذي تم استخراجه من غيدرا
+        uint64_t luauExecOffset = 0x10085ae58;
+        
+        // حساب الـ Slide لتجاوز حماية الـ ASLR في الآيفون
+        uint64_t slide = _dyld_get_image_vmaddr_slide(0);
+        uint64_t targetFunctionAddress = slide + luauExecOffset;
+        
+        if (targetFunctionAddress != 0) {
+            // ربط دالة التنفيذ مع العنوان الفعلي في الذاكرة
+            typedef void (*LuauExecuteFunction)(const char *script);
+            LuauExecuteFunction executeLua = (LuauExecuteFunction)targetFunctionAddress;
+            
+            // تنفيذ السكربت
+            const char *utf8Script = [codeToRun UTF8String];
+            executeLua(utf8Script);
+            
+            NSLog(@"[Melux MX] Script executed at address: 0x%llx", targetFunctionAddress);
+        } else {
+            NSLog(@"[Melux MX] Error: Failed to resolve target memory address.");
+        }
     }
 }
 
@@ -428,7 +449,6 @@ static __strong id mxMenuController = nil;
 
 - (void)runSavedScriptFromButton:(UIButton *)sender {
     UITableViewCell *cell = (UITableViewCell *)[sender superview];
-    // إذا كانت خلية الجدول
     while (cell && ![cell isKindOfClass:[UITableViewCell class]]) {
         cell = (UITableViewCell *)[cell superview];
     }
@@ -438,7 +458,6 @@ static __strong id mxMenuController = nil;
             NSDictionary *item = self.savedScriptsArray[indexPath.row];
             self.scriptInputBox.text = item[@"code"];
             [self switchTabToUseScript:nil];
-            // تنفيذ تلقائي عند الضغط على Run
             [self executeScriptAction:nil];
         }
     }
