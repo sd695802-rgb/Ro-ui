@@ -2,90 +2,40 @@
 #import <mach/mach.h>
 #import <substrate.h>
 #import <QuartzCore/QuartzCore.h>
-// ============================================================
-// Global Mod Variables (Real Action State)
-// ============================================================
 static BOOL enableESP = NO;
-static int espType = 0; // 0: Box, 1: Skeleton, 2: Line
+static int espType = 0;
 static BOOL enableAimbot = NO;
 static BOOL enableInfJump = YES;
 static float infJumpHeight = 10.0f;
 static float customSpeed = 16.0f;
 static BOOL saveRespawnEnabled = NO;
-// Keep the controller alive after creation.
 static __strong id axiomMenuController = nil;
-// Function pointers for original methods (Hooks)
-static void (*orig_player_update)(id self, SEL _cmd) = NULL;
-static void (*orig_jump_func)(id self, SEL _cmd) = NULL;
-// ============================================================
-// Forward Declarations
-// ============================================================
 @interface AxiomMenuController : UIViewController
 <UITableViewDelegate, UITableViewDataSource, UITextViewDelegate>
 @property (nonatomic, strong) UIButton *floatingButton;
 @property (nonatomic, strong) UIView *mainPanel;
 @property (nonatomic, strong) UIView *contentContainer;
-// Tabs
 @property (nonatomic, strong) UIButton *tabTogglesBtn;
 @property (nonatomic, strong) UIButton *tabExecutorBtn;
 @property (nonatomic, strong) UIButton *tabSaverBtn;
-// Views for tabs
 @property (nonatomic, strong) UIView *viewToggles;
 @property (nonatomic, strong) UIView *viewExecutor;
 @property (nonatomic, strong) UIView *viewSaver;
-// Executor components
 @property (nonatomic, strong) UITextView *scriptInputBox;
-// Saved Scripts Table
 @property (nonatomic, strong) UITableView *savedScriptsTable;
 @property (nonatomic, strong) NSMutableArray *savedScriptsArray;
 @property (nonatomic, strong) UITextField *scriptNameField;
 @end
-// ============================================================
-// Hook Implementations for Real Mod Functionality
-// ============================================================
-// Example hook replacing Roblox player update tick to enforce speed & physics overrides
-static void replacement_player_update(id self, SEL _cmd) {
-if (orig_player_update) {
-orig_player_update(self, _cmd);
-}
-// If speed is modified, apply it if object responds to walkSpeed selector
-if (customSpeed != 16.0f) {
-@try {
-if ([self respondsToSelector:@selector(setWalkSpeed:)]) {
-// [self performSelector:@selector(setWalkSpeed:) withObject:@(customSpeed)];
-}
-} @catch (NSException *exception) {
-// Safe catch
-}
-}
-}
-// Example hook for infinite jump / jump state override
-static void replacement_jump_func(id self, SEL _cmd) {
-if (enableInfJump) {
-// Force jump state or bypass cooldown
-}
-if (orig_jump_func) {
-orig_jump_func(self, _cmd);
-}
-}
-// ============================================================
-// Implementation
-// ============================================================
 @implementation AxiomMenuController
-#pragma mark - Lifecycle
  (void)viewDidLoad
 {
 [super viewDidLoad];
 self.view.backgroundColor = [UIColor clearColor];
-NSArray *storedScripts =
-[[NSUserDefaults standardUserDefaults]
-arrayForKey:@"AxiomSavedScripts"];
+NSArray *storedScripts = [[NSUserDefaults standardUserDefaults] arrayForKey:@"AxiomSavedScripts"];
 if (storedScripts.count > 0) {
-self.savedScriptsArray =
-[NSMutableArray arrayWithArray:storedScripts];
+self.savedScriptsArray = [NSMutableArray arrayWithArray:storedScripts];
 } else {
-self.savedScriptsArray =
-[NSMutableArray arrayWithArray:@[
+self.savedScriptsArray = [NSMutableArray arrayWithArray:@[
 @"print('Axiom Script 1');",
 @"print('Axiom Script 2');"
 ]];
@@ -93,28 +43,18 @@ self.savedScriptsArray =
 [self setupFloatingButton];
 [self setupMainPanel];
 }
-#pragma mark - Window Helper
  (UIWindow *)activeWindow
 {
 UIWindow *result = nil;
 if (@available(iOS 13.0, *)) {
 for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
-if (scene.activationState != UISceneActivationStateForegroundActive) {
-continue;
-}
-if (![scene isKindOfClass:[UIWindowScene class]]) {
-continue;
-}
+if (scene.activationState != UISceneActivationStateForegroundActive) continue;
+if (![scene isKindOfClass:[UIWindowScene class]]) continue;
 UIWindowScene *windowScene = (UIWindowScene *)scene;
 for (UIWindow *window in windowScene.windows) {
-if (window.isKeyWindow) {
-result = window;
-break;
+if (window.isKeyWindow) { result = window; break; }
 }
-}
-if (result != nil) {
-break;
-}
+if (result != nil) break;
 if (windowScene.windows.count > 0) {
 result = windowScene.windows.firstObject;
 }
@@ -127,7 +67,6 @@ result = [UIApplication sharedApplication].keyWindow;
 }
 return result;
 }
-#pragma mark - Floating Button
  (void)setupFloatingButton
 {
 self.floatingButton = [UIButton buttonWithType:UIButtonTypeCustom];
@@ -145,7 +84,6 @@ if (window != nil) {
 [window addSubview:self.floatingButton];
 }
 }
-#pragma mark - Main Panel
  (void)setupMainPanel
 {
 self.mainPanel = [[UIView alloc] initWithFrame:CGRectMake(80, 70, 320, 390)];
@@ -155,7 +93,7 @@ self.mainPanel.layer.borderWidth = 1.5f;
 self.mainPanel.layer.borderColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0].CGColor;
 self.mainPanel.hidden = YES;
 UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(10, 8, 300, 25)];
-title.text = @"AXIOM'S ROBLOX CORE V1.0 (ACTIVE)";
+title.text = @"AXIOM'S ROBLOX CORE V1.0";
 title.textColor = [UIColor whiteColor];
 title.font = [UIFont boldSystemFontOfSize:13.0];
 title.textAlignment = NSTextAlignmentCenter;
@@ -178,7 +116,6 @@ if (window != nil) {
 [window addSubview:self.mainPanel];
 }
 }
-#pragma mark - Tab Button
  (UIButton *)createTabButton:(NSString *)title frame:(CGRect)frame action:(SEL)action
 {
 UIButton *btn = [UIButton buttonWithType:UIButtonTypeSystem];
@@ -191,7 +128,6 @@ btn.titleLabel.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightMedium];
 [btn addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
 return btn;
 }
-#pragma mark - Toggles View
  (void)setupTogglesView
 {
 self.viewToggles = [[UIView alloc] initWithFrame:self.contentContainer.bounds];
@@ -260,7 +196,6 @@ respawnLbl.font = [UIFont systemFontOfSize:13];
 [self.viewToggles addSubview:scroll];
 [self.contentContainer addSubview:self.viewToggles];
 }
-#pragma mark - Executor View
  (void)setupExecutorView
 {
 self.viewExecutor = [[UIView alloc] initWithFrame:self.contentContainer.bounds];
@@ -268,7 +203,7 @@ self.scriptInputBox = [[UITextView alloc] initWithFrame:CGRectMake(10, 10, 280, 
 self.scriptInputBox.backgroundColor = [UIColor colorWithWhite:0.05 alpha:1.0];
 self.scriptInputBox.textColor = [UIColor greenColor];
 self.scriptInputBox.font = [UIFont fontWithName:@"Courier" size:12];
-self.scriptInputBox.text = @"-- Active Lua Execution Bridge Ready\nprint('Axiom Connected to Roblox Script Engine');";
+self.scriptInputBox.text = @"-- Type or paste your Lua script here\nprint('Axiom Executor Ready');";
 self.scriptInputBox.layer.cornerRadius = 6.0f;
 [self.viewExecutor addSubview:self.scriptInputBox];
 UIButton *execBtn = [UIButton buttonWithType:UIButtonTypeSystem];
@@ -289,7 +224,6 @@ clearBtn.layer.cornerRadius = 6.0f;
 [self.viewExecutor addSubview:clearBtn];
 [self.contentContainer addSubview:self.viewExecutor];
 }
-#pragma mark - Saver View
  (void)setupSaverView
 {
 self.viewSaver = [[UIView alloc] initWithFrame:self.contentContainer.bounds];
@@ -316,7 +250,6 @@ self.savedScriptsTable.dataSource = self;
 [self.viewSaver addSubview:self.savedScriptsTable];
 [self.contentContainer addSubview:self.viewSaver];
 }
-#pragma mark - Tabs
  (void)switchTabToToggles:(id)sender
 {
 self.viewToggles.hidden = NO;
@@ -351,31 +284,25 @@ b.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
 }
 }
 }
-#pragma mark - Menu
  (void)toggleMenuVisibility
 {
 self.mainPanel.hidden = !self.mainPanel.hidden;
 }
-#pragma mark - Real Mod Toggle Actions & State Handlers
  (void)onEspToggle:(UISwitch *)sender
 {
 enableESP = sender.isOn;
-NSLog(@"[Axiom] ESP Active State: %d, Type: %d", enableESP, espType);
 }
  (void)onEspTypeChange:(UISegmentedControl *)sender
 {
 espType = (int)sender.selectedSegmentIndex;
-NSLog(@"[Axiom] ESP Type Updated: %d", espType);
 }
  (void)onAimbotToggle:(UISwitch *)sender
 {
 enableAimbot = sender.isOn;
-NSLog(@"[Axiom] Aimbot Active State: %d", enableAimbot);
 }
  (void)onInfJumpToggle:(UISwitch *)sender
 {
 enableInfJump = sender.isOn;
-NSLog(@"[Axiom] Infinite Jump Active State: %d", enableInfJump);
 }
  (void)onSpeedChange:(UISlider *)sender
 {
@@ -384,27 +311,15 @@ UILabel *lbl = [self.viewToggles viewWithTag:888];
 if (lbl) {
 lbl.text = [NSString stringWithFormat:@"Speed Multiplier: %.1f", customSpeed];
 }
-NSLog(@"[Axiom] Walk Speed Modified: %.1f", customSpeed);
 }
  (void)onRespawnToggle:(UISwitch *)sender
 {
 saveRespawnEnabled = sender.isOn;
-NSLog(@"[Axiom] Save Respawn Position: %d", saveRespawnEnabled);
 }
-#pragma mark - Real Executor Action
  (void)executeScriptAction:(id)sender
 {
 NSString *codeToRun = self.scriptInputBox.text;
-if (codeToRun.length > 0) {
-NSLog(@"[Axiom] Executing script payload: %@", codeToRun);
-// Bridge mechanism to evaluate script inside active game script engine context if available
-UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Axiom Executor" message:@"Script executed successfully in game context!" preferredStyle:UIAlertControllerStyleAlert];
-[alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-UIWindow *window = [self activeWindow];
-if (window && window.rootViewController) {
-[window.rootViewController presentViewController:alert animated:YES completion:nil];
-}
-}
+(void)codeToRun;
 }
  (void)clearScriptAction:(id)sender
 {
@@ -422,7 +337,6 @@ return;
 [self.savedScriptsTable reloadData];
 self.scriptNameField.text = @"";
 }
-#pragma mark - UITableView
  (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
 return self.savedScriptsArray.count;
@@ -449,13 +363,10 @@ if (indexPath.row >= self.savedScriptsArray.count) {
 return;
 }
 NSString *savedName = self.savedScriptsArray[indexPath.row];
-self.scriptInputBox.text = [NSString stringWithFormat:@"-- Loaded Script: %@\nprint('Executing active script payload...');", savedName];
+self.scriptInputBox.text = [NSString stringWithFormat:@"-- Loaded: %@\nprint('Saved script selected');", savedName];
 [self switchTabToExecutor:nil];
 }
 @end
-// ============================================================
-// Constructor with Substrate Function Hook Injection
-// ============================================================
 attribute((constructor))
 static void axiom_entry(void)
 {
@@ -483,12 +394,7 @@ return;
 }
 AxiomMenuController *controller = [[AxiomMenuController alloc] init];
 axiomMenuController = controller;
-// Initialize Substrate Hook bindings if symbols exist in target binary
-MSImageRef robloxImage = MSGetImageByName("RobloxApp");
-if (robloxImage) {
-// Safe dynamic hook application place
-NSLog(@"[Axiom] Roblox binary mapped successfully for hooking.");
-}
+(void)controller;
 });
 });
 }
