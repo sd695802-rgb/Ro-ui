@@ -4,23 +4,19 @@
 #import <QuartzCore/QuartzCore.h>
 
 // ============================================================
-// Global Mod Variables
+// Global Mod Variables (Updated with __attribute__((unused)))
 // ============================================================
 
 static BOOL enableESP = NO;
-static int espType = 0; // 0: Box, 1: Skeleton, 2: Line
+static int espType __attribute__((unused)) = 0; // 0: Box, 1: Skeleton, 2: Line
 static BOOL enableAimbot = NO;
 static BOOL enableInfJump = YES;
-static float infJumpHeight = 10.0f;
+static float infJumpHeight __attribute__((unused)) = 10.0f;
 
-static inline float AxiomGetInfJumpHeight(void)
-{
-    return infJumpHeight;
-}
+static float customSpeed __attribute__((unused)) = 16.0f;
+static BOOL saveRespawnEnabled __attribute__((unused)) = NO;
 
-static float customSpeed = 16.0f;
-static BOOL saveRespawnEnabled = NO;
-
+// Keep the controller alive.
 static __strong id axiomMenuController = nil;
 
 // ============================================================
@@ -180,7 +176,6 @@ static __strong id axiomMenuController = nil;
     self.contentContainer = [[UIView alloc] initWithFrame:CGRectMake(10, 75, 300, 305)];
     [self.mainPanel addSubview:self.contentContainer];
 
-    // استدعاء محتوى التبويبات لكي لا تبقى فارغة
     [self setupTogglesView];
     [self setupExecutorView];
     [self setupSaverView];
@@ -228,228 +223,4 @@ static __strong id axiomMenuController = nil;
 
     yPos += 45;
     UISwitch *aimSw = [[UISwitch alloc] initWithFrame:CGRectMake(10, yPos, 51, 31)];
-    aimSw.on = enableAimbot;
-    [aimSw addTarget:self action:@selector(onAimbotToggle:) forControlEvents:UIControlEventValueChanged];
-    [scroll addSubview:aimSw];
-
-    UILabel *aimLbl = [[UILabel alloc] initWithFrame:CGRectMake(75, yPos, 210, 31)];
-    aimLbl.text = @"Aimbot (Nearest Enemy)";
-    aimLbl.textColor = [UIColor whiteColor];
-    aimLbl.font = [UIFont systemFontOfSize:13];
-    [scroll addSubview:aimLbl];
-
-    yPos += 45;
-    UISwitch *jumpSw = [[UISwitch alloc] initWithFrame:CGRectMake(10, yPos, 51, 31)];
-    [jumpSw setOn:enableInfJump];
-    [jumpSw addTarget:self action:@selector(onInfJumpToggle:) forControlEvents:UIControlEventValueChanged];
-    [scroll addSubview:jumpSw];
-
-    UILabel *jumpLbl = [[UILabel alloc] initWithFrame:CGRectMake(75, yPos, 210, 31)];
-    jumpLbl.text = @"Infinite Jump";
-    jumpLbl.textColor = [UIColor whiteColor];
-    jumpLbl.font = [UIFont systemFontOfSize:13];
-    [scroll addSubview:jumpLbl];
-
-    [self.viewToggles addSubview:scroll];
-    [self.contentContainer addSubview:self.viewToggles];
-}
-
-- (void)setupExecutorView
-{
-    self.viewExecutor = [[UIView alloc] initWithFrame:self.contentContainer.bounds];
-    self.scriptInputBox = [[UITextView alloc] initWithFrame:CGRectMake(10, 10, 280, 200)];
-    self.scriptInputBox.backgroundColor = [UIColor colorWithWhite:0.05 alpha:1.0];
-    self.scriptInputBox.textColor = [UIColor greenColor];
-    self.scriptInputBox.font = [UIFont fontWithName:@"Courier" size:12];
-    self.scriptInputBox.text = @"-- Type or paste your Lua script here\nprint('Axiom Executor Ready');";
-    self.scriptInputBox.layer.cornerRadius = 6.0f;
-    [self.viewExecutor addSubview:self.scriptInputBox];
-
-    UIButton *execBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    execBtn.frame = CGRectMake(10, 225, 135, 35);
-    [execBtn setTitle:@"Execute" forState:UIControlStateNormal];
-    [execBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    execBtn.backgroundColor = [UIColor colorWithRed:0.0 green:0.5 blue:0.2 alpha:1.0];
-    execBtn.layer.cornerRadius = 6.0f;
-    [execBtn addTarget:self action:@selector(executeScriptAction:) forControlEvents:UIControlEventTouchUpInside];
-    [self.viewExecutor addSubview:execBtn];
-
-    UIButton *clearBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    clearBtn.frame = CGRectMake(155, 225, 135, 35);
-    [clearBtn setTitle:@"Clear" forState:UIControlStateNormal];
-    [clearBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    clearBtn.backgroundColor = [UIColor colorWithRed:0.6 green:0.1 blue:0.1 alpha:1.0];
-    clearBtn.layer.cornerRadius = 6.0f;
-    [clearBtn addTarget:self action:@selector(clearScriptAction:) forControlEvents:UIControlEventTouchUpInside];
-    [self.viewExecutor addSubview:clearBtn];
-
-    [self.contentContainer addSubview:self.viewExecutor];
-}
-
-- (void)setupSaverView
-{
-    self.viewSaver = [[UIView alloc] initWithFrame:self.contentContainer.bounds];
     
-    self.scriptNameField = [[UITextField alloc] initWithFrame:CGRectMake(10, 10, 180, 30)];
-    self.scriptNameField.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
-    self.scriptNameField.textColor = [UIColor whiteColor];
-    self.scriptNameField.placeholder = @" Script Name";
-    self.scriptNameField.font = [UIFont systemFontOfSize:12];
-    self.scriptNameField.layer.cornerRadius = 4.0f;
-    [self.viewSaver addSubview:self.scriptNameField];
-
-    UIButton *saveBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    saveBtn.frame = CGRectMake(200, 10, 90, 30);
-    [saveBtn setTitle:@"Save Current" forState:UIControlStateNormal];
-    [saveBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    saveBtn.backgroundColor = [UIColor colorWithRed:0.0 green:0.4 blue:0.8 alpha:1.0];
-    saveBtn.layer.cornerRadius = 4.0f;
-    saveBtn.titleLabel.font = [UIFont systemFontOfSize:11];
-    [saveBtn addTarget:self action:@selector(saveCurrentScript:) forControlEvents:UIControlEventTouchUpInside];
-    [self.viewSaver addSubview:saveBtn];
-
-    self.savedScriptsTable = [[UITableView alloc] initWithFrame:CGRectMake(10, 50, 280, 240) style:UITableViewStylePlain];
-    self.savedScriptsTable.backgroundColor = [UIColor clearColor];
-    self.savedScriptsTable.delegate = self;
-    self.savedScriptsTable.dataSource = self;
-    [self.viewSaver addSubview:self.savedScriptsTable];
-
-    [self.contentContainer addSubview:self.viewSaver];
-}
-
-#pragma mark - Tab Switching & Styling
-
-- (void)switchTabToToggles:(id)sender
-{
-    self.viewToggles.hidden = NO;
-    self.viewExecutor.hidden = YES;
-    self.viewSaver.hidden = YES;
-    [self styleActiveTab:self.tabTogglesBtn];
-}
-
-- (void)switchTabToExecutor:(id)sender
-{
-    self.viewToggles.hidden = YES;
-    self.viewExecutor.hidden = NO;
-    self.viewSaver.hidden = YES;
-    [self styleActiveTab:self.tabExecutorBtn];
-}
-
-- (void)switchTabToSaver:(id)sender
-{
-    self.viewToggles.hidden = YES;
-    self.viewExecutor.hidden = YES;
-    self.viewSaver.hidden = NO;
-    [self styleActiveTab:self.tabSaverBtn];
-}
-
-- (void)styleActiveTab:(UIButton *)activeBtn
-{
-    NSArray *allTabs = @[self.tabTogglesBtn, self.tabExecutorBtn, self.tabSaverBtn];
-    for (UIButton *b in allTabs) {
-        if (b == activeBtn) {
-            b.backgroundColor = [UIColor colorWithRed:0.0 green:0.6 blue:0.8 alpha:1.0];
-            [b setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-        } else {
-            b.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
-            [b setTitleColor:[UIColor lightGrayColor] forState:UIControlStateNormal];
-        }
-    }
-}
-
-#pragma mark - Actions & Toggles
-
-- (void)toggleMenuVisibility
-{
-    self.mainPanel.hidden = !self.mainPanel.hidden;
-    if (!self.mainPanel.hidden) {
-        UIWindow *window = [self activeWindow];
-        if (window) {
-            [window bringSubviewToFront:self.mainPanel];
-            [window bringSubviewToFront:self.floatingButton];
-        }
-    }
-}
-
-- (void)onEspToggle:(UISwitch *)sender { enableESP = sender.isOn; }
-- (void)onAimbotToggle:(UISwitch *)sender { enableAimbot = sender.isOn; }
-- (void)onInfJumpToggle:(UISwitch *)sender { enableInfJump = sender.isOn; }
-
-- (void)executeScriptAction:(id)sender
-{
-    NSString *codeToRun = self.scriptInputBox.text;
-    if (codeToRun.length > 0) {
-        NSLog(@"[Axiom] Executing script: %@", codeToRun);
-    }
-}
-
-- (void)clearScriptAction:(id)sender { self.scriptInputBox.text = @""; }
-
-- (void)saveCurrentScript:(id)sender
-{
-    NSString *name = [self.scriptNameField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-    NSString *code = self.scriptInputBox.text;
-    if (name.length == 0) return;
-
-    NSDictionary *scriptDict = @{@"name": name, @"code": code ? code : @""};
-    [self.savedScriptsArray addObject:scriptDict];
-    [[NSUserDefaults standardUserDefaults] setObject:self.savedScriptsArray forKey:@"AxiomSavedScripts"];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-    [self.savedScriptsTable reloadData];
-    self.scriptNameField.text = @"";
-}
-
-#pragma mark - UITableView DataSource
-
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
-{
-    return self.savedScriptsArray.count;
-}
-
-- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
-{
-    static NSString *cellID = @"AxiomCell";
-    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
-    if (cell == nil) {
-        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellID];
-        cell.backgroundColor = [UIColor clearColor];
-        cell.textLabel.textColor = [UIColor whiteColor];
-        cell.textLabel.font = [UIFont systemFontOfSize:12];
-    }
-    if (indexPath.row < self.savedScriptsArray.count) {
-        NSDictionary *item = self.savedScriptsArray[indexPath.row];
-        cell.textLabel.text = item[@"name"];
-    }
-    return cell;
-}
-
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
-{
-    [tableView deselectRowAtIndexPath:indexPath animated:YES];
-    if (indexPath.row >= self.savedScriptsArray.count) return;
-    NSDictionary *item = self.savedScriptsArray[indexPath.row];
-    self.scriptInputBox.text = item[@"code"];
-    [self switchTabToExecutor:nil];
-}
-
-@end
-
-// ============================================================
-// Constructor & Entry Hook
-// ============================================================
-
-__attribute__((constructor))
-static void axiom_entry(void)
-{
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        if (axiomMenuController != nil) {
-            return;
-        }
-
-        AxiomMenuController *controller = [[AxiomMenuController alloc] init];
-        axiomMenuController = controller;
-        
-        // إجبار تحميل الـ View وعرض الزر العائم والقوائم بالداخل فوراً
-        [controller loadViewIfNeeded];
-    });
-}
