@@ -378,7 +378,7 @@ for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
 if (scene.activationState != UISceneActivationStateForegroundActive) continue;
 if (![scene isKindOfClass:[UIWindowScene class]]) continue;
 UIWindowScene *windowScene = (UIWindowScene *)scene;
-for (UIWindow *candidate in windowScene.windows) {
+for (UISWindow *candidate in windowScene.windows) {
 if (candidate.isKeyWindow) { window = candidate; break; }
 }
 if (window != nil) break;
