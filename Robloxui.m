@@ -89,12 +89,11 @@ static __strong id axiomMenuController = nil;
 {
     if (self.floatingButton) return;
 
-    // زر دائري صغير (مثلاً 44x44 بكسل)
     self.floatingButton = [UIButton buttonWithType:UIButtonTypeCustom];
     self.floatingButton.frame = CGRectMake(40, 100, 44, 44);
     
     self.floatingButton.backgroundColor = [UIColor colorWithRed:0.05 green:0.05 blue:0.05 alpha:0.90];
-    self.floatingButton.layer.cornerRadius = 22.0f; // نصف العرض ليكون دائرياً تماماً
+    self.floatingButton.layer.cornerRadius = 22.0f;
     self.floatingButton.layer.borderWidth = 2.0f;
     self.floatingButton.layer.borderColor = [UIColor colorWithRed:0.0 green:1.0 blue:0.5 alpha:1.0].CGColor;
 
@@ -102,14 +101,11 @@ static __strong id axiomMenuController = nil;
     [self.floatingButton setTitleColor:[UIColor colorWithRed:0.0 green:1.0 blue:0.5 alpha:1.0] forState:UIControlStateNormal];
     self.floatingButton.titleLabel.font = [UIFont boldSystemFontOfSize:14.0];
 
-    // إضافة إجراء الضغط لإظهار/إخفاء القائمة
     [self.floatingButton addTarget:self action:@selector(toggleMenuVisibility) forControlEvents:UIControlEventTouchUpInside];
 
-    // إضافة خاصية السحب (Pan Gesture) لتحريك الزر في أي مكان بالشاشة
     UIPanGestureRecognizer *panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleButtonPan:)];
     [self.floatingButton addGestureRecognizer:panGesture];
 
-    // إضافته فوق نافذة التطبيق النشطة
     UIWindow *window = [self activeWindow];
     if (window) {
         [window addSubview:self.floatingButton];
@@ -140,7 +136,6 @@ static __strong id axiomMenuController = nil;
     return result;
 }
 
-// دالة تحريك الزر العائم بالإصبع
 - (void)handleButtonPan:(UIPanGestureRecognizer * _Nonnull)gesture
 {
     UIWindow *window = [self activeWindow];
@@ -162,7 +157,7 @@ static __strong id axiomMenuController = nil;
     self.mainPanel.layer.cornerRadius = 14.0f;
     self.mainPanel.layer.borderWidth = 1.5f;
     self.mainPanel.layer.borderColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0].CGColor;
-    self.mainPanel.hidden = YES; // مخفية افتراضياً حتى تضغط الزر العائم
+    self.mainPanel.hidden = YES;
 
     UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(10, 8, 300, 25)];
     title.text = @"AXIOM'S ROBLOX CORE V1.0";
@@ -204,3 +199,74 @@ static __strong id axiomMenuController = nil;
 
 - (void)toggleMenuVisibility
 {
+    self.mainPanel.hidden = !self.mainPanel.hidden;
+    if (!self.mainPanel.hidden) {
+        UIWindow *window = [self activeWindow];
+        if (window) {
+            [window bringSubviewToFront:self.mainPanel];
+            [window bringSubviewToFront:self.floatingButton];
+        }
+    }
+}
+
+- (void)switchTabToToggles:(id)sender {}
+- (void)switchTabToExecutor:(id)sender {}
+- (void)switchTabToSaver:(id)sender {}
+
+#pragma mark - UITableView DataSource (Fixing missing protocol methods)
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return self.savedScriptsArray.count;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *cellID = @"AxiomCell";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
+    if (cell == nil) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellID];
+        cell.backgroundColor = [UIColor clearColor];
+        cell.textLabel.textColor = [UIColor whiteColor];
+        cell.textLabel.font = [UIFont systemFontOfSize:12];
+    }
+    if (indexPath.row < self.savedScriptsArray.count) {
+        NSDictionary *item = self.savedScriptsArray[indexPath.row];
+        cell.textLabel.text = item[@"name"];
+    }
+    return cell;
+}
+
+@end
+
+// ============================================================
+// Constructor & Entry Hook
+// ============================================================
+
+__attribute__((constructor))
+static void axiom_entry(void)
+{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        UIWindow *window = nil;
+        if (@available(iOS 13.0, *)) {
+            for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+                if (scene.activationState == UISceneActivationStateForegroundActive && [scene isKindOfClass:[UIWindowScene class]]) {
+                    UIWindowScene *windowScene = (UIWindowScene *)scene;
+                    for (UIWindow *candidate in windowScene.windows) {
+                        if (candidate.isKeyWindow) { window = candidate; break; }
+                    }
+                }
+                if (window) break;
+            }
+        }
+        if (!window) {
+            window = [UIApplication sharedApplication].keyWindow;
+        }
+
+        if (window && axiomMenuController == nil) {
+            AxiomMenuController *controller = [[AxiomMenuController alloc] init];
+            axiomMenuController = controller;
+            NSLog(@"[Axiom] Menu successfully loaded and attached!");
+        }
+    });
+}
