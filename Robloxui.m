@@ -3,8 +3,28 @@
 #import <mach-o/dyld.h>
 #import <substrate.h>
 #import <QuartzCore/QuartzCore.h>
+#import <objc/runtime.h>
 
 static __strong id mxMenuController = nil;
+
+// --- تعريف دوال تخطي الحماية (Bypass) ---
+void (*orig_kickUser)(void *self, SEL sel, id reason);
+
+void replacement_kickUser(void *self, SEL sel, id reason) {
+    NSLog(@"[Melux MX Bypass] Anti-cheat kick attempt intercepted and blocked: %@", reason);
+}
+
+void setupAntiCheatBypass() {
+    Class targetClass = objc_getClass("RelaunchManager");
+    if (targetClass) {
+        Method targetMethod = class_getInstanceMethod(targetClass, @selector(kickPlayer:));
+        if (targetMethod) {
+            MSHookMessageEx(targetClass, @selector(kickPlayer:), (IMP)&replacement_kickUser, (IMP *)&orig_kickUser);
+            NSLog(@"[Melux MX Bypass] Bypass hooked successfully!");
+        }
+    }
+}
+// ----------------------------------------
 
 @interface MXMenuController : UIViewController <UITableViewDelegate, UITableViewDataSource, UITextViewDelegate, UITextFieldDelegate>
 
@@ -64,7 +84,7 @@ static __strong id mxMenuController = nil;
     self.floatingButton.backgroundColor = [UIColor colorWithRed:0.02 green:0.02 blue:0.02 alpha:0.95];
     self.floatingButton.layer.cornerRadius = 24.0f;
     self.floatingButton.layer.borderWidth = 2.0f;
-    self.floatingButton.layer.borderColor = [UIColor colorWithRed:0.8 green:0.2 blue:1.0 alpha:1.0].CGColor; // لون بنفسجي مميز
+    self.floatingButton.layer.borderColor = [UIColor colorWithRed:0.8 green:0.2 blue:1.0 alpha:1.0].CGColor;
 
     [self.floatingButton setTitle:@"MX" forState:UIControlStateNormal];
     [self.floatingButton setTitleColor:[UIColor colorWithRed:0.8 green:0.2 blue:1.0 alpha:1.0] forState:UIControlStateNormal];
@@ -126,7 +146,7 @@ static __strong id mxMenuController = nil;
     if (self.mainPanel) return;
 
     self.mainPanel = [[UIView alloc] initWithFrame:CGRectMake(80, 80, 330, 410)];
-    self.mainPanel.backgroundColor = [UIColor colorWithRed:0.06 green:0.06 blue:0.08 alpha:0.98]; // أسود بالكامل وراقي
+    self.mainPanel.backgroundColor = [UIColor colorWithRed:0.06 green:0.06 blue:0.08 alpha:0.98];
     self.mainPanel.layer.cornerRadius = 14.0f;
     self.mainPanel.layer.borderWidth = 1.5f;
     self.mainPanel.layer.borderColor = [UIColor colorWithRed:0.8 green:0.2 blue:1.0 alpha:1.0].CGColor;
@@ -182,7 +202,6 @@ static __strong id mxMenuController = nil;
 - (void)setupUseScriptView {
     self.viewUseScript = [[UIView alloc] initWithFrame:self.contentContainer.bounds];
 
-    // خانة كتابة السكربت
     self.scriptInputBox = [[UITextView alloc] initWithFrame:CGRectMake(0, 5, 310, 155)];
     self.scriptInputBox.backgroundColor = [UIColor colorWithRed:0.03 green:0.03 blue:0.04 alpha:1.0];
     self.scriptInputBox.textColor = [UIColor colorWithRed:0.2 green:1.0 blue:0.4 alpha:1.0];
@@ -202,7 +221,6 @@ static __strong id mxMenuController = nil;
 
     [self.viewUseScript addSubview:self.scriptInputBox];
 
-    // أزرار التنفيذ والتنظيف
     UIButton *execBtn = [UIButton buttonWithType:UIButtonTypeSystem];
     execBtn.frame = CGRectMake(0, 168, 150, 35);
     [execBtn setTitle:@"Execute" forState:UIControlStateNormal];
@@ -221,7 +239,6 @@ static __strong id mxMenuController = nil;
     [clearBtn addTarget:self action:@selector(clearScriptAction:) forControlEvents:UIControlEventTouchUpInside];
     [self.viewUseScript addSubview:clearBtn];
 
-    // قسم الحفظ (اختر اسم للسكربت + زر حفظ)
     self.scriptNameField = [[UITextField alloc] initWithFrame:CGRectMake(0, 215, 195, 34)];
     self.scriptNameField.backgroundColor = [UIColor colorWithRed:0.12 green:0.12 blue:0.15 alpha:1.0];
     self.scriptNameField.textColor = [UIColor whiteColor];
@@ -278,19 +295,16 @@ static __strong id mxMenuController = nil;
 
     CGFloat btnY = 20;
     
-    // زر 1: قناة التليجرام
     UIButton *tgChannelBtn = [self createLinkButton:@"1- قناتي تيلجرام" frame:CGRectMake(10, btnY, 290, 45)];
     [tgChannelBtn addTarget:self action:@selector(openTgChannel) forControlEvents:UIControlEventTouchUpInside];
     [self.viewAbout addSubview:tgChannelBtn];
 
     btnY += 60;
-    // زر 2: حسابي تيلجرام
     UIButton *tgAccountBtn = [self createLinkButton:@"2- حسابي تيلجرام" frame:CGRectMake(10, btnY, 290, 45)];
     [tgAccountBtn addTarget:self action:@selector(openTgAccount) forControlEvents:UIControlEventTouchUpInside];
     [self.viewAbout addSubview:tgAccountBtn];
 
     btnY += 60;
-    // زر 3: مساعد المطور
     UIButton *devHelperBtn = [self createLinkButton:@"3- مساعد المطور" frame:CGRectMake(10, btnY, 290, 45)];
     [devHelperBtn addTarget:self action:@selector(openDevHelper) forControlEvents:UIControlEventTouchUpInside];
     [self.viewAbout addSubview:devHelperBtn];
@@ -374,19 +388,14 @@ static __strong id mxMenuController = nil;
     if (codeToRun.length > 0) {
         NSLog(@"[Melux MX] Executing script:\n%@", codeToRun);
         
-        // الأوفست الفعلي الذي تم استخراجه من غيدرا
         uint64_t luauExecOffset = 0x10085ae58;
-        
-        // حساب الـ Slide لتجاوز حماية الـ ASLR في الآيفون
         uint64_t slide = _dyld_get_image_vmaddr_slide(0);
         uint64_t targetFunctionAddress = slide + luauExecOffset;
         
         if (targetFunctionAddress != 0) {
-            // ربط دالة التنفيذ مع العنوان الفعلي في الذاكرة
             typedef void (*LuauExecuteFunction)(const char *script);
             LuauExecuteFunction executeLua = (LuauExecuteFunction)targetFunctionAddress;
             
-            // تنفيذ السكربت
             const char *utf8Script = [codeToRun UTF8String];
             executeLua(utf8Script);
             
@@ -429,7 +438,6 @@ static __strong id mxMenuController = nil;
         cell.textLabel.textColor = [UIColor whiteColor];
         cell.textLabel.font = [UIFont boldSystemFontOfSize:12];
         
-        // زر Run السريع لكل سكربت محفوظ
         UIButton *runBtn = [UIButton buttonWithType:UIButtonTypeSystem];
         runBtn.frame = CGRectMake(0, 0, 65, 26);
         [runBtn setTitle:@"Run" forState:UIControlStateNormal];
@@ -476,6 +484,9 @@ static __strong id mxMenuController = nil;
 __attribute__((constructor))
 static void mx_entry(void) {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        // تفعيل تخطي الحماية أولاً عند الإقلاع
+        setupAntiCheatBypass();
+
         if (mxMenuController != nil) {
             return;
         }
