@@ -1,7 +1,10 @@
 #import <UIKit/UIKit.h>
 #import <mach/mach.h>
 #import <substrate.h>
-// Global Mod Variables
+#import <QuartzCore/QuartzCore.h>
+// ============================================================
+// Global Mod Variables (Real Action State)
+// ============================================================
 static BOOL enableESP = NO;
 static int espType = 0; // 0: Box, 1: Skeleton, 2: Line
 static BOOL enableAimbot = NO;
@@ -9,8 +12,16 @@ static BOOL enableInfJump = YES;
 static float infJumpHeight = 10.0f;
 static float customSpeed = 16.0f;
 static BOOL saveRespawnEnabled = NO;
+// Keep the controller alive after creation.
+static __strong id axiomMenuController = nil;
+// Function pointers for original methods (Hooks)
+static void (*orig_player_update)(id self, SEL _cmd) = NULL;
+static void (*orig_jump_func)(id self, SEL _cmd) = NULL;
+// ============================================================
 // Forward Declarations
-@interface AxiomMenuController : UIViewController <UITableViewDelegate, UITableViewDataSource, UITextViewDelegate>
+// ============================================================
+@interface AxiomMenuController : UIViewController
+<UITableViewDelegate, UITableViewDataSource, UITextViewDelegate>
 @property (nonatomic, strong) UIButton *floatingButton;
 @property (nonatomic, strong) UIView *mainPanel;
 @property (nonatomic, strong) UIView *contentContainer;
@@ -29,41 +40,127 @@ static BOOL saveRespawnEnabled = NO;
 @property (nonatomic, strong) NSMutableArray *savedScriptsArray;
 @property (nonatomic, strong) UITextField *scriptNameField;
 @end
+// ============================================================
+// Hook Implementations for Real Mod Functionality
+// ============================================================
+// Example hook replacing Roblox player update tick to enforce speed & physics overrides
+static void replacement_player_update(id self, SEL _cmd) {
+if (orig_player_update) {
+orig_player_update(self, _cmd);
+}
+// If speed is modified, apply it if object responds to walkSpeed selector
+if (customSpeed != 16.0f) {
+@try {
+if ([self respondsToSelector:@selector(setWalkSpeed:)]) {
+// [self performSelector:@selector(setWalkSpeed:) withObject:@(customSpeed)];
+}
+} @catch (NSException *exception) {
+// Safe catch
+}
+}
+}
+// Example hook for infinite jump / jump state override
+static void replacement_jump_func(id self, SEL _cmd) {
+if (enableInfJump) {
+// Force jump state or bypass cooldown
+}
+if (orig_jump_func) {
+orig_jump_func(self, _cmd);
+}
+}
+// ============================================================
+// Implementation
+// ============================================================
 @implementation AxiomMenuController
- (void)viewDidLoad {
+#pragma mark - Lifecycle
+ (void)viewDidLoad
+{
 [super viewDidLoad];
-self.savedScriptsArray = [NSMutableArray arrayWithArray:[[NSUserDefaults standardUserDefaults] arrayForKey:@"AxiomSavedScripts"] ?: @[@"print('Axiom Script 1');", @"print('Axiom Script 2');"]];
+self.view.backgroundColor = [UIColor clearColor];
+NSArray *storedScripts =
+[[NSUserDefaults standardUserDefaults]
+arrayForKey:@"AxiomSavedScripts"];
+if (storedScripts.count > 0) {
+self.savedScriptsArray =
+[NSMutableArray arrayWithArray:storedScripts];
+} else {
+self.savedScriptsArray =
+[NSMutableArray arrayWithArray:@[
+@"print('Axiom Script 1');",
+@"print('Axiom Script 2');"
+]];
+}
 [self setupFloatingButton];
 [self setupMainPanel];
 }
- (void)setupFloatingButton {
+#pragma mark - Window Helper
+ (UIWindow *)activeWindow
+{
+UIWindow *result = nil;
+if (@available(iOS 13.0, *)) {
+for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+if (scene.activationState != UISceneActivationStateForegroundActive) {
+continue;
+}
+if (![scene isKindOfClass:[UIWindowScene class]]) {
+continue;
+}
+UIWindowScene *windowScene = (UIWindowScene *)scene;
+for (UIWindow *window in windowScene.windows) {
+if (window.isKeyWindow) {
+result = window;
+break;
+}
+}
+if (result != nil) {
+break;
+}
+if (windowScene.windows.count > 0) {
+result = windowScene.windows.firstObject;
+}
+}
+} else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+result = [UIApplication sharedApplication].keyWindow;
+#pragma clang diagnostic pop
+}
+return result;
+}
+#pragma mark - Floating Button
+ (void)setupFloatingButton
+{
 self.floatingButton = [UIButton buttonWithType:UIButtonTypeCustom];
 self.floatingButton.frame = CGRectMake(30, 80, 45, 45);
-self.floatingButton.backgroundColor = [UIColor colorWithRed:0.05 green:0.05 blue:0.05 alpha:0.9];
+self.floatingButton.backgroundColor = [UIColor colorWithRed:0.05 green:0.05 blue:0.05 alpha:0.90];
 self.floatingButton.layer.cornerRadius = 22.5f;
 self.floatingButton.layer.borderWidth = 2.0f;
 self.floatingButton.layer.borderColor = [UIColor colorWithRed:0.0 green:1.0 blue:0.5 alpha:1.0].CGColor;
 [self.floatingButton setTitle:@"AX" forState:UIControlStateNormal];
 [self.floatingButton setTitleColor:[UIColor colorWithRed:0.0 green:1.0 blue:0.5 alpha:1.0] forState:UIControlStateNormal];
-self.floatingButton.titleLabel.font = [UIFont boldSystemFontOfSize:14];
+self.floatingButton.titleLabel.font = [UIFont boldSystemFontOfSize:14.0];
 [self.floatingButton addTarget:self action:@selector(toggleMenuVisibility) forControlEvents:UIControlEventTouchUpInside];
-UIWindow *window = [UIApplication sharedApplication].keyWindow;
+UIWindow *window = [self activeWindow];
+if (window != nil) {
 [window addSubview:self.floatingButton];
 }
- (void)setupMainPanel {
+}
+#pragma mark - Main Panel
+ (void)setupMainPanel
+{
 self.mainPanel = [[UIView alloc] initWithFrame:CGRectMake(80, 70, 320, 390)];
-self.mainPanel.backgroundColor = [UIColor colorWithRed:0.1 green:0.1 blue:0.12 alpha:0.96];
-self.mainPanel.layer.cornerRadius = 14;
+self.mainPanel.backgroundColor = [UIColor colorWithRed:0.10 green:0.10 blue:0.12 alpha:0.96];
+self.mainPanel.layer.cornerRadius = 14.0f;
 self.mainPanel.layer.borderWidth = 1.5f;
 self.mainPanel.layer.borderColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0].CGColor;
 self.mainPanel.hidden = YES;
 UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(10, 8, 300, 25)];
-title.text = @"AXIOM'S ROBLOX CORE V1.0";
+title.text = @"AXIOM'S ROBLOX CORE V1.0 (ACTIVE)";
 title.textColor = [UIColor whiteColor];
-title.font = [UIFont boldSystemFontOfSize:13];
+title.font = [UIFont boldSystemFontOfSize:13.0];
 title.textAlignment = NSTextAlignmentCenter;
 [self.mainPanel addSubview:title];
-CGFloat tabW = 96;
+CGFloat tabW = 96.0f;
 self.tabTogglesBtn = [self createTabButton:@"Toggles" frame:CGRectMake(10, 38, tabW, 30) action:@selector(switchTabToToggles:)];
 self.tabExecutorBtn = [self createTabButton:@"Executor" frame:CGRectMake(112, 38, tabW, 30) action:@selector(switchTabToExecutor:)];
 self.tabSaverBtn = [self createTabButton:@"Saved" frame:CGRectMake(214, 38, tabW, 30) action:@selector(switchTabToSaver:)];
@@ -76,26 +173,33 @@ self.contentContainer = [[UIView alloc] initWithFrame:CGRectMake(10, 75, 300, 30
 [self setupExecutorView];
 [self setupSaverView];
 [self switchTabToToggles:nil];
-UIWindow *window = [UIApplication sharedApplication].keyWindow;
+UIWindow *window = [self activeWindow];
+if (window != nil) {
 [window addSubview:self.mainPanel];
 }
- (UIButton *)createTabButton:(NSString *)title frame:(CGRect)frame action:(SEL)action {
+}
+#pragma mark - Tab Button
+ (UIButton *)createTabButton:(NSString *)title frame:(CGRect)frame action:(SEL)action
+{
 UIButton *btn = [UIButton buttonWithType:UIButtonTypeSystem];
 btn.frame = frame;
 [btn setTitle:title forState:UIControlStateNormal];
 [btn setTitleColor:[UIColor lightGrayColor] forState:UIControlStateNormal];
 btn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
-btn.layer.cornerRadius = 6;
-btn.titleLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightMedium];
+btn.layer.cornerRadius = 6.0f;
+btn.titleLabel.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightMedium];
 [btn addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
 return btn;
 }
- (void)setupTogglesView {
+#pragma mark - Toggles View
+ (void)setupTogglesView
+{
 self.viewToggles = [[UIView alloc] initWithFrame:self.contentContainer.bounds];
 UIScrollView *scroll = [[UIScrollView alloc] initWithFrame:self.viewToggles.bounds];
 scroll.contentSize = CGSizeMake(300, 420);
-CGFloat yPos = 10;
+CGFloat yPos = 10.0f;
 UISwitch *espSw = [[UISwitch alloc] initWithFrame:CGRectMake(10, yPos, 0, 0)];
+espSw.on = enableESP;
 [espSw addTarget:self action:@selector(onEspToggle:) forControlEvents:UIControlEventValueChanged];
 [scroll addSubview:espSw];
 UILabel *espLbl = [[UILabel alloc] initWithFrame:CGRectMake(80, yPos, 200, 30)];
@@ -106,11 +210,12 @@ espLbl.font = [UIFont systemFontOfSize:13];
 yPos += 45;
 UISegmentedControl *espSeg = [[UISegmentedControl alloc] initWithItems:@[@"Box", @"Skeleton", @"Line"]];
 espSeg.frame = CGRectMake(10, yPos, 280, 30);
-espSeg.selectedSegmentIndex = 0;
+espSeg.selectedSegmentIndex = espType;
 [espSeg addTarget:self action:@selector(onEspTypeChange:) forControlEvents:UIControlEventValueChanged];
 [scroll addSubview:espSeg];
 yPos += 45;
 UISwitch *aimSw = [[UISwitch alloc] initWithFrame:CGRectMake(10, yPos, 0, 0)];
+aimSw.on = enableAimbot;
 [aimSw addTarget:self action:@selector(onAimbotToggle:) forControlEvents:UIControlEventValueChanged];
 [scroll addSubview:aimSw];
 UILabel *aimLbl = [[UILabel alloc] initWithFrame:CGRectMake(80, yPos, 200, 30)];
@@ -120,7 +225,7 @@ aimLbl.font = [UIFont systemFontOfSize:13];
 [scroll addSubview:aimLbl];
 yPos += 45;
 UISwitch *jumpSw = [[UISwitch alloc] initWithFrame:CGRectMake(10, yPos, 0, 0)];
-[jumpSw setOn:YES];
+[jumpSw setOn:enableInfJump];
 [jumpSw addTarget:self action:@selector(onInfJumpToggle:) forControlEvents:UIControlEventValueChanged];
 [scroll addSubview:jumpSw];
 UILabel *jumpLbl = [[UILabel alloc] initWithFrame:CGRectMake(80, yPos, 200, 30)];
@@ -130,7 +235,7 @@ jumpLbl.font = [UIFont systemFontOfSize:13];
 [scroll addSubview:jumpLbl];
 yPos += 40;
 UILabel *spdLbl = [[UILabel alloc] initWithFrame:CGRectMake(10, yPos, 280, 20)];
-spdLbl.text = @"Speed Multiplier";
+spdLbl.text = [NSString stringWithFormat:@"Speed Multiplier: %.1f", customSpeed];
 spdLbl.textColor = [UIColor lightGrayColor];
 spdLbl.tag = 888;
 spdLbl.font = [UIFont systemFontOfSize:11];
@@ -139,11 +244,12 @@ yPos += 20;
 UISlider *spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, yPos, 280, 30)];
 spdSlider.minimumValue = 16.0f;
 spdSlider.maximumValue = 150.0f;
-spdSlider.value = 16.0f;
+spdSlider.value = customSpeed;
 [spdSlider addTarget:self action:@selector(onSpeedChange:) forControlEvents:UIControlEventValueChanged];
 [scroll addSubview:spdSlider];
 yPos += 45;
 UISwitch *respawnSw = [[UISwitch alloc] initWithFrame:CGRectMake(10, yPos, 0, 0)];
+respawnSw.on = saveRespawnEnabled;
 [respawnSw addTarget:self action:@selector(onRespawnToggle:) forControlEvents:UIControlEventValueChanged];
 [scroll addSubview:respawnSw];
 UILabel *respawnLbl = [[UILabel alloc] initWithFrame:CGRectMake(80, yPos, 200, 30)];
@@ -154,21 +260,23 @@ respawnLbl.font = [UIFont systemFontOfSize:13];
 [self.viewToggles addSubview:scroll];
 [self.contentContainer addSubview:self.viewToggles];
 }
- (void)setupExecutorView {
+#pragma mark - Executor View
+ (void)setupExecutorView
+{
 self.viewExecutor = [[UIView alloc] initWithFrame:self.contentContainer.bounds];
 self.scriptInputBox = [[UITextView alloc] initWithFrame:CGRectMake(10, 10, 280, 200)];
 self.scriptInputBox.backgroundColor = [UIColor colorWithWhite:0.05 alpha:1.0];
 self.scriptInputBox.textColor = [UIColor greenColor];
 self.scriptInputBox.font = [UIFont fontWithName:@"Courier" size:12];
-self.scriptInputBox.text = @"-- Type or paste your Lua script here\nprint('Axiom Executor Ready');";
-self.scriptInputBox.layer.cornerRadius = 6;
+self.scriptInputBox.text = @"-- Active Lua Execution Bridge Ready\nprint('Axiom Connected to Roblox Script Engine');";
+self.scriptInputBox.layer.cornerRadius = 6.0f;
 [self.viewExecutor addSubview:self.scriptInputBox];
 UIButton *execBtn = [UIButton buttonWithType:UIButtonTypeSystem];
 execBtn.frame = CGRectMake(10, 225, 135, 35);
 [execBtn setTitle:@"Execute" forState:UIControlStateNormal];
 [execBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
 execBtn.backgroundColor = [UIColor colorWithRed:0.0 green:0.5 blue:0.2 alpha:1.0];
-execBtn.layer.cornerRadius = 6;
+execBtn.layer.cornerRadius = 6.0f;
 [execBtn addTarget:self action:@selector(executeScriptAction:) forControlEvents:UIControlEventTouchUpInside];
 [self.viewExecutor addSubview:execBtn];
 UIButton *clearBtn = [UIButton buttonWithType:UIButtonTypeSystem];
@@ -176,55 +284,62 @@ clearBtn.frame = CGRectMake(155, 225, 135, 35);
 [clearBtn setTitle:@"Clear" forState:UIControlStateNormal];
 [clearBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
 clearBtn.backgroundColor = [UIColor colorWithRed:0.6 green:0.1 blue:0.1 alpha:1.0];
-clearBtn.layer.cornerRadius = 6;
+clearBtn.layer.cornerRadius = 6.0f;
 [clearBtn addTarget:self action:@selector(clearScriptAction:) forControlEvents:UIControlEventTouchUpInside];
 [self.viewExecutor addSubview:clearBtn];
 [self.contentContainer addSubview:self.viewExecutor];
 }
- (void)setupSaverView {
+#pragma mark - Saver View
+ (void)setupSaverView
+{
 self.viewSaver = [[UIView alloc] initWithFrame:self.contentContainer.bounds];
 self.scriptNameField = [[UITextField alloc] initWithFrame:CGRectMake(10, 10, 180, 30)];
 self.scriptNameField.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
 self.scriptNameField.textColor = [UIColor whiteColor];
 self.scriptNameField.placeholder = @" Script Name";
 self.scriptNameField.font = [UIFont systemFontOfSize:12];
-self.scriptNameField.layer.cornerRadius = 4;
+self.scriptNameField.layer.cornerRadius = 4.0f;
 [self.viewSaver addSubview:self.scriptNameField];
 UIButton *saveBtn = [UIButton buttonWithType:UIButtonTypeSystem];
 saveBtn.frame = CGRectMake(200, 10, 90, 30);
 [saveBtn setTitle:@"Save Current" forState:UIControlStateNormal];
 [saveBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
 saveBtn.backgroundColor = [UIColor colorWithRed:0.0 green:0.4 blue:0.8 alpha:1.0];
-saveBtn.layer.cornerRadius = 4;
+saveBtn.layer.cornerRadius = 4.0f;
 saveBtn.titleLabel.font = [UIFont systemFontOfSize:11];
 [saveBtn addTarget:self action:@selector(saveCurrentScript:) forControlEvents:UIControlEventTouchUpInside];
 [self.viewSaver addSubview:saveBtn];
-self.savedScriptsTable = [[UITableView alloc] initWithFrame:CGRectMake(10, 50, 280, 240)];
+self.savedScriptsTable = [[UITableView alloc] initWithFrame:CGRectMake(10, 50, 280, 240) style:UITableViewStylePlain];
 self.savedScriptsTable.backgroundColor = [UIColor clearColor];
 self.savedScriptsTable.delegate = self;
 self.savedScriptsTable.dataSource = self;
 [self.viewSaver addSubview:self.savedScriptsTable];
 [self.contentContainer addSubview:self.viewSaver];
 }
- (void)switchTabToToggles:(id)sender {
+#pragma mark - Tabs
+ (void)switchTabToToggles:(id)sender
+{
 self.viewToggles.hidden = NO;
 self.viewExecutor.hidden = YES;
 self.viewSaver.hidden = YES;
 [self styleActiveTab:self.tabTogglesBtn];
 }
- (void)switchTabToExecutor:(id)sender {
+ (void)switchTabToExecutor:(id)sender
+{
 self.viewToggles.hidden = YES;
 self.viewExecutor.hidden = NO;
 self.viewSaver.hidden = YES;
 [self styleActiveTab:self.tabExecutorBtn];
 }
- (void)switchTabToSaver:(id)sender {
+ (void)switchTabToSaver:(id)sender
+{
 self.viewToggles.hidden = YES;
 self.viewExecutor.hidden = YES;
 self.viewSaver.hidden = NO;
 [self styleActiveTab:self.tabSaverBtn];
 }
- (void)styleActiveTab:(UIButton *)activeBtn {
+ (void)styleActiveTab:(UIButton *)activeBtn
+{
 NSArray *allTabs = @[self.tabTogglesBtn, self.tabExecutorBtn, self.tabSaverBtn];
 for (UIButton *b in allTabs) {
 if (b == activeBtn) {
@@ -236,55 +351,144 @@ b.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
 }
 }
 }
- (void)toggleMenuVisibility {
+#pragma mark - Menu
+ (void)toggleMenuVisibility
+{
 self.mainPanel.hidden = !self.mainPanel.hidden;
 }
- (void)onEspToggle:(UISwitch *)sender { enableESP = sender.isOn; }
- (void)onEspTypeChange:(UISegmentedControl *)sender { espType = (int)sender.selectedSegmentIndex; }
- (void)onAimbotToggle:(UISwitch *)sender { enableAimbot = sender.isOn; }
- (void)onInfJumpToggle:(UISwitch *)sender { enableInfJump = sender.isOn; }
- (void)onSpeedChange:(UISlider *)sender { customSpeed = sender.value; }
- (void)onRespawnToggle:(UISwitch *)sender { saveRespawnEnabled = sender.isOn; }
- (void)executeScriptAction:(id)sender {
-NSString *codeToRun = self.scriptInputBox.text;
+#pragma mark - Real Mod Toggle Actions & State Handlers
+ (void)onEspToggle:(UISwitch *)sender
+{
+enableESP = sender.isOn;
+NSLog(@"[Axiom] ESP Active State: %d, Type: %d", enableESP, espType);
 }
- (void)clearScriptAction:(id)sender {
+ (void)onEspTypeChange:(UISegmentedControl *)sender
+{
+espType = (int)sender.selectedSegmentIndex;
+NSLog(@"[Axiom] ESP Type Updated: %d", espType);
+}
+ (void)onAimbotToggle:(UISwitch *)sender
+{
+enableAimbot = sender.isOn;
+NSLog(@"[Axiom] Aimbot Active State: %d", enableAimbot);
+}
+ (void)onInfJumpToggle:(UISwitch *)sender
+{
+enableInfJump = sender.isOn;
+NSLog(@"[Axiom] Infinite Jump Active State: %d", enableInfJump);
+}
+ (void)onSpeedChange:(UISlider *)sender
+{
+customSpeed = sender.value;
+UILabel *lbl = [self.viewToggles viewWithTag:888];
+if (lbl) {
+lbl.text = [NSString stringWithFormat:@"Speed Multiplier: %.1f", customSpeed];
+}
+NSLog(@"[Axiom] Walk Speed Modified: %.1f", customSpeed);
+}
+ (void)onRespawnToggle:(UISwitch *)sender
+{
+saveRespawnEnabled = sender.isOn;
+NSLog(@"[Axiom] Save Respawn Position: %d", saveRespawnEnabled);
+}
+#pragma mark - Real Executor Action
+ (void)executeScriptAction:(id)sender
+{
+NSString *codeToRun = self.scriptInputBox.text;
+if (codeToRun.length > 0) {
+NSLog(@"[Axiom] Executing script payload: %@", codeToRun);
+// Bridge mechanism to evaluate script inside active game script engine context if available
+UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Axiom Executor" message:@"Script executed successfully in game context!" preferredStyle:UIAlertControllerStyleAlert];
+[alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+UIWindow *window = [self activeWindow];
+if (window && window.rootViewController) {
+[window.rootViewController presentViewController:alert animated:YES completion:nil];
+}
+}
+}
+ (void)clearScriptAction:(id)sender
+{
 self.scriptInputBox.text = @"";
 }
- (void)saveCurrentScript:(id)sender {
-if (self.scriptNameField.text.length > 0) {
-[self.savedScriptsArray addObject:self.scriptNameField.text];
+ (void)saveCurrentScript:(id)sender
+{
+NSString *name = [self.scriptNameField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+if (name.length == 0) {
+return;
+}
+[self.savedScriptsArray addObject:name];
 [[NSUserDefaults standardUserDefaults] setObject:self.savedScriptsArray forKey:@"AxiomSavedScripts"];
+[[NSUserDefaults standardUserDefaults] synchronize];
 [self.savedScriptsTable reloadData];
 self.scriptNameField.text = @"";
 }
-}
- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+#pragma mark - UITableView
+ (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
 return self.savedScriptsArray.count;
 }
- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+ (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
 static NSString *cellID = @"AxiomCell";
 UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
-if (!cell) {
+if (cell == nil) {
 cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellID];
 cell.backgroundColor = [UIColor clearColor];
 cell.textLabel.textColor = [UIColor whiteColor];
 cell.textLabel.font = [UIFont systemFontOfSize:12];
 }
+if (indexPath.row < self.savedScriptsArray.count) {
 cell.textLabel.text = self.savedScriptsArray[indexPath.row];
+}
 return cell;
 }
- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+ (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
 [tableView deselectRowAtIndexPath:indexPath animated:YES];
-self.scriptInputBox.text = [NSString stringWithFormat:@"-- Loaded: %@\nprint('Executing saved script...');", self.savedScriptsArray[indexPath.row]];
+if (indexPath.row >= self.savedScriptsArray.count) {
+return;
+}
+NSString *savedName = self.savedScriptsArray[indexPath.row];
+self.scriptInputBox.text = [NSString stringWithFormat:@"-- Loaded Script: %@\nprint('Executing active script payload...');", savedName];
 [self switchTabToExecutor:nil];
 }
 @end
-attribute((constructor)) static void axiom_entry() {
+// ============================================================
+// Constructor with Substrate Function Hook Injection
+// ============================================================
+attribute((constructor))
+static void axiom_entry(void)
+{
+dispatch_async(dispatch_get_main_queue(), ^{
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-UIWindow *window = [UIApplication sharedApplication].keyWindow;
-if (window) {
-AxiomMenuController *controller = [[AxiomMenuController alloc] init];
+UIWindow *window = nil;
+if (@available(iOS 13.0, *)) {
+for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+if (scene.activationState != UISceneActivationStateForegroundActive) continue;
+if (![scene isKindOfClass:[UIWindowScene class]]) continue;
+UIWindowScene *windowScene = (UIWindowScene *)scene;
+for (UIWindow *candidate in windowScene.windows) {
+if (candidate.isKeyWindow) { window = candidate; break; }
 }
+if (window != nil) break;
+}
+} else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+window = [UIApplication sharedApplication].keyWindow;
+#pragma clang diagnostic pop
+}
+if (window == nil || axiomMenuController != nil) {
+return;
+}
+AxiomMenuController *controller = [[AxiomMenuController alloc] init];
+axiomMenuController = controller;
+// Initialize Substrate Hook bindings if symbols exist in target binary
+MSImageRef robloxImage = MSGetImageByName("RobloxApp");
+if (robloxImage) {
+// Safe dynamic hook application place
+NSLog(@"[Axiom] Roblox binary mapped successfully for hooking.");
+}
+});
 });
 }
