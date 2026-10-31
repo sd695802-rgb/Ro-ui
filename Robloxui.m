@@ -119,7 +119,6 @@ static __strong id axiomMenuController = nil;
     [gesture setTranslation:CGPointZero inView:window];
 }
 
-// جعل اللوحة الرئيسية قابلة للسحب أيضاً مثل الزر العائم
 - (void)handlePanelPan:(UIPanGestureRecognizer *)gesture {
     UIWindow *window = [self activeWindow];
     CGPoint translation = [gesture translationInView:window];
@@ -238,6 +237,16 @@ static __strong id axiomMenuController = nil;
     self.scriptInputBox.font = [UIFont fontWithName:@"Courier" size:12];
     self.scriptInputBox.text = @"-- Type or paste your Lua script here\nprint('Axiom Executor Ready');";
     self.scriptInputBox.layer.cornerRadius = 6.0f;
+
+    // إضافة شريط علوي للكيبورد يحتوي على زر إغلاق (Done) لحل مشكلة تعليق الكيبورد
+    UIToolbar *keyboardToolbar = [[UIToolbar alloc] initWithFrame:CGRectMake(0, 0, 320, 40)];
+    keyboardToolbar.barStyle = UIBarStyleDefault;
+    UIBarButtonItem *flexSpace = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
+    UIBarButtonItem *doneBtn = [[UIBarButtonItem alloc] initWithTitle:@"Done / Close" style:UIBarButtonItemStyleDone target:self action:@selector(dismissKeyboard:)];
+    keyboardToolbar.items = @[flexSpace, doneBtn];
+    [keyboardToolbar sizeToFit];
+    self.scriptInputBox.inputAccessoryView = keyboardToolbar;
+
     [self.viewExecutor addSubview:self.scriptInputBox];
 
     UIButton *execBtn = [UIButton buttonWithType:UIButtonTypeSystem];
@@ -259,6 +268,10 @@ static __strong id axiomMenuController = nil;
     [self.viewExecutor addSubview:clearBtn];
 
     [self.contentContainer addSubview:self.viewExecutor];
+}
+
+- (void)dismissKeyboard:(id)sender {
+    [self.view.window endEditing:YES];
 }
 
 - (void)setupSaverView {
@@ -338,7 +351,12 @@ static __strong id axiomMenuController = nil;
 
 - (void)onEspToggle:(UISwitch *)sender { enableESP = sender.isOn; }
 - (void)onAimbotToggle:(UISwitch *)sender { enableAimbot = sender.isOn; }
-- (void)onInfJumpToggle:(UISwitch *)sender { enableInfJump = sender.isOn; }
+- (void)onInfJumpToggle:(UISwitch *)sender { 
+    enableInfJump = sender.isOn;
+    if (enableInfJump) {
+        NSLog(@"[Axiom] Infinite Jump Enabled");
+    }
+}
 
 - (void)executeScriptAction:(id)sender {
     NSString *codeToRun = self.scriptInputBox.text;
